@@ -12,8 +12,6 @@
 #pragma comment(lib, "wininet")
 #define MAX_PROCESSES 1000
 #define MAX_CONNECTIONS 500
-
-// Structures
 typedef struct {
     char processName[MAX_PATH];
     DWORD pid;
@@ -32,8 +30,6 @@ ProcessInfo baselineProcesses[MAX_PROCESSES];
 int baselineCount = 0;
 SimpleConnection activeConnections[MAX_CONNECTIONS];
 int connectionCount = 0;
-
-// Prototypes
 void showPopup(const char* title, const char* message, UINT type);
 void createBaseline();
 void detectSuspiciousProcesses();
@@ -45,8 +41,6 @@ void logAlert(const char* message);
 void monitorSystemResources();
 void checkRunningServices();
 void printHeader();
-
-// Fonction principale
 int main() {
     system("color 0A");
     SetConsoleTitle("=== SYSTEME DE DETECTION D'INTRUSION WINDOWS ===");
@@ -65,8 +59,6 @@ int main() {
     printf("[+] Notifications popup activees\n");
     printf("[+] Fichier log: C:\\IDS\\alerts.log\n");
     printf("[+] Appuyez sur Ctrl+C pour arreter\n\n");
-
-    // Boucle de surveillance continue
     int scanNumber = 0;
     while(1) {
         scanNumber++;
@@ -87,7 +79,7 @@ int main() {
         printf("\n[*] Prochain scan dans 60 secondes...\n");
         printf("[*] Surveillance active...\n");
 
-        Sleep(60000); // 60 secondes
+        Sleep(60000); 
     }
 
     return 0;
@@ -105,13 +97,12 @@ void printHeader() {
     printf("  ================================================\n");
 }
 
-// Afficher une popup Windows
 void showPopup(const char* title, const char* message, UINT type) {
-    // Utiliser un thread séparé pour ne pas bloquer
+    
     MessageBox(NULL, message, title, type | MB_TOPMOST | MB_SETFOREGROUND);
 }
 
-// Créer la baseline du système
+
 void createBaseline() {
     HANDLE hSnapshot;
     PROCESSENTRY32 pe32;
@@ -140,8 +131,6 @@ void createBaseline() {
     CloseHandle(hSnapshot);
     printf("[+] Baseline creee: %d processus enregistres\n", baselineCount);
 }
-
-// Détecter les processus suspects
 void detectSuspiciousProcesses() {
     HANDLE hSnapshot;
     PROCESSENTRY32 pe32;
@@ -161,7 +150,6 @@ void detectSuspiciousProcesses() {
 
     if (Process32First(hSnapshot, &pe32)) {
         do {
-            // Vérifier si le processus est suspect
             if (isProcessSuspicious(pe32.szExeFile)) {
                 suspiciousFound++;
 
@@ -181,8 +169,6 @@ void detectSuspiciousProcesses() {
                 showPopup("MALWARE DETECTE", message, MB_ICONERROR);
                 logAlert(message);
             }
-
-            // Détecter les processus système dans des emplacements suspects
             if (strstr(pe32.szExeFile, "svchost.exe") ||
                 strstr(pe32.szExeFile, "lsass.exe") ||
                 strstr(pe32.szExeFile, "csrss.exe") ||
@@ -192,12 +178,11 @@ void detectSuspiciousProcesses() {
                 if (hProcess) {
                     char path[MAX_PATH];
                     if (GetModuleFileNameEx(hProcess, NULL, path, MAX_PATH)) {
-                        // Convertir en minuscules pour comparaison
+                
                         char lowerPath[MAX_PATH];
                         strcpy(lowerPath, path);
                         _strlwr(lowerPath);
 
-                        // Vérifier si le chemin est suspect
                         if (!strstr(lowerPath, "system32") && !strstr(lowerPath, "syswow64")) {
                             snprintf(message, sizeof(message),
                                 "=== ALERTE ROOTKIT POSSIBLE ===\n\n"
@@ -217,7 +202,7 @@ void detectSuspiciousProcesses() {
                 }
             }
 
-            // Détecter les nouveaux processus
+         
             int foundInBaseline = 0;
             for (int i = 0; i < baselineCount; i++) {
                 if (strcmp(baselineProcesses[i].processName, pe32.szExeFile) == 0) {
@@ -243,12 +228,9 @@ void detectSuspiciousProcesses() {
     }
 }
 
-// Surveiller les connexions (version simplifiée)
 void monitorConnections() {
     printf("\n[*] Surveillance des connexions reseau...\n");
     printf("[+] Analyse des ports en ecoute...\n");
-
-    // Vérifier les ports suspects en écoute
     SOCKET testSocket;
     int suspiciousPorts[] = {4444, 5555, 6666, 31337, 1337, 12345, 54321};
     int numPorts = sizeof(suspiciousPorts) / sizeof(suspiciousPorts[0]);
@@ -261,7 +243,7 @@ void monitorConnections() {
             addr.sin_addr.s_addr = INADDR_ANY;
             addr.sin_port = htons(suspiciousPorts[i]);
 
-            // Tester si le port est en écoute
+      
             if (bind(testSocket, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
                 char message[512];
                 snprintf(message, sizeof(message),
@@ -286,7 +268,6 @@ void monitorConnections() {
     printf("[+] Verification des ports terminee\n");
 }
 
-// Obtenir le propriétaire d'un processus
 void getProcessOwner(DWORD pid, char* username, size_t size) {
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
     if (hProcess == NULL) {
@@ -326,7 +307,7 @@ void getProcessOwner(DWORD pid, char* username, size_t size) {
     CloseHandle(hProcess);
 }
 
-// Vérifier si un processus est suspect
+
 int isProcessSuspicious(const char* name) {
     const char* suspiciousNames[] = {
         "nc.exe", "netcat", "ncat.exe",
@@ -343,7 +324,7 @@ int isProcessSuspicious(const char* name) {
 
     int numSuspicious = sizeof(suspiciousNames) / sizeof(suspiciousNames[0]);
 
-    // Convertir en minuscules pour comparaison
+  
     char lowerName[MAX_PATH];
     strncpy(lowerName, name, MAX_PATH);
     _strlwr(lowerName);
@@ -356,7 +337,7 @@ int isProcessSuspicious(const char* name) {
     return 0;
 }
 
-// Vérifier si un port est suspect
+
 int isSuspiciousPort(int port) {
     int suspiciousPorts[] = {4444, 5555, 6666, 31337, 1337, 12345, 54321, 9999, 8888};
     int numPorts = sizeof(suspiciousPorts) / sizeof(suspiciousPorts[0]);
@@ -369,9 +350,9 @@ int isSuspiciousPort(int port) {
     return 0;
 }
 
-// Enregistrer une alerte dans un fichier log
+
 void logAlert(const char* message) {
-    // Créer le dossier C:\IDS s'il n'existe pas
+   
     CreateDirectory("C:\\IDS", NULL);
 
     FILE* logFile = fopen("C:\\IDS\\alerts.log", "a");
@@ -388,7 +369,7 @@ void logAlert(const char* message) {
     }
 }
 
-// Surveiller les ressources système
+
 void monitorSystemResources() {
     printf("\n[*] Surveillance des ressources systeme...\n");
 
@@ -417,7 +398,7 @@ void monitorSystemResources() {
         logAlert(message);
     }
 
-    // Vérifier l'espace disque
+ 
     ULARGE_INTEGER freeBytesAvailable, totalNumberOfBytes, totalNumberOfFreeBytes;
     if (GetDiskFreeSpaceEx("C:\\", &freeBytesAvailable, &totalNumberOfBytes, &totalNumberOfFreeBytes)) {
         DWORD diskUsage = 100 - (DWORD)((totalNumberOfFreeBytes.QuadPart * 100) / totalNumberOfBytes.QuadPart);
@@ -440,13 +421,13 @@ void monitorSystemResources() {
     }
 }
 
-// Vérifier les services en cours d'exécution
+
 void checkRunningServices() {
     printf("\n[*] Verification des services critiques...\n");
 
     SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ENUMERATE_SERVICE);
     if (schSCManager) {
-        // Vérifier Windows Defender
+      
         SC_HANDLE schService = OpenService(schSCManager, "WinDefend", SERVICE_QUERY_STATUS);
         if (schService) {
             SERVICE_STATUS_PROCESS ssp;
@@ -478,3 +459,4 @@ void checkRunningServices() {
 
     printf("[+] Verification des services terminee\n");
 }
+
